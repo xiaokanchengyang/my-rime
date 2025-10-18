@@ -1,0 +1,236 @@
+# Rime schema
+# encoding: utf-8
+
+schema:
+  schema_id: xiaohe_shuangpin_wanxiang
+  name: 小鹤双拼·万象词库
+  version: "1.0.0"
+  author:
+    - Integrated by ScriptGo + Wanxiang + myRime
+  description: |
+    基于小鹤双拼键位，挂载万象词库/语法与Lua扩展，仅保留小鹤双拼。
+  dependencies:
+    - wanxiang_mixedcode
+    - wanxiang_reverse
+    - wanxiang_charset
+
+switches:
+  - name: ascii_mode
+    states: [ 中文, 英文 ]
+  - name: ascii_punct
+    states: [ 中标, 英标 ]
+  - name: full_shape
+    states: [ 半角, 全角 ]
+  - name: emoji
+    states: [ 表情关, 表情开 ]
+  - options: [ s2s, s2t, s2hk, s2tw ]
+    states: [ 简体, 通繁, 港繁, 臺繁 ]
+  - name: tone_hint
+    states: [ 读音关, 读音开 ]
+  - name: super_tips
+    states: [ 提示关, 提示开 ]
+    reset: 1
+  - name: charset_filter
+    states: [ 小字集, 大字集 ]
+    reset: 1
+
+engine:
+  processors:
+    - lua_processor@*select_character
+    - lua_processor@*quick_symbol_text
+    - lua_processor@*super_tips
+    - lua_processor@*tone_fallback
+    - lua_processor@*super_sequence*P
+    - lua_processor@*limit_repeated
+    - lua_processor@*backspace_limit
+    - ascii_composer
+    - recognizer
+    - key_binder
+    - speller
+    - punctuator
+    - selector
+    - navigator
+    - express_editor
+
+  segmentors:
+    - ascii_segmentor
+    - matcher
+    - abc_segmentor
+    - affix_segmentor@wanxiang_reverse
+    - affix_segmentor@add_user_dict
+    - punct_segmentor
+    - fallback_segmentor
+
+  translators:
+    - punct_translator
+    - script_translator
+    - lua_translator@*version_display
+    - lua_translator@*shijian
+    - lua_translator@*unicode
+    - lua_translator@*number_translator
+    - lua_translator@*super_calculator
+    - lua_translator@*input_statistics
+    - table_translator@custom_phrase
+    - table_translator@wanxiang_mixedcode
+    - table_translator@wanxiang_reverse
+    - script_translator@add_user_dict
+    - script_translator@user_dict_set
+
+  filters:
+    - lua_filter@*chars_filter
+    - reverse_lookup_filter@radical_reverse_lookup
+    - lua_filter@*super_comment_preedit
+    - simplifier@emoji
+    - simplifier@s2t
+    - simplifier@s2tw
+    - simplifier@s2hk
+    - simplifier@chinese_english
+    - lua_filter@*super_lookup
+    - lua_filter@*text_formatting_promote
+    - uniquifier
+
+# Grammar and Wanxiang params largely inherited from wanxiang.schema.yaml
+grammar:
+  language: wanxiang-lts-zh-hans
+  collocation_max_length: 8
+  collocation_min_length: 2
+  collocation_penalty: -10
+  non_collocation_penalty: -12
+  weak_collocation_penalty: -24
+  rear_penalty: -18
+
+# Xiaohe Shuangpin mapping via Wanxiang algebra
+speller:
+  alphabet: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA7890`;/\
+  initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA/
+  delimiter: " '"
+  visual_delimiter: " "
+  tone_isolate: true
+  algebra:
+    __patch:
+      - wanxiang_algebra:/base/小鹤双拼
+
+translator:
+  dictionary: wanxiang
+  enable_completion: true
+  enable_user_dict: true
+  core_word_length: 4
+  max_word_length: 7
+  contextual_suggestions: false
+  max_homophones: 5
+  max_homographs: 5
+  initial_quality: 3
+  spelling_hints: 30
+  always_show_comments: true
+  comment_format: {comment}
+  preedit_format:
+    - xform/7/¹/
+    - xform/8/²/
+    - xform/9/³/
+    - xform/0/⁴/
+
+custom_phrase:
+  dictionary: ""
+  user_dict: custom_phrase
+  db_class: stabledb
+  enable_completion: false
+  enable_sentence: false
+  initial_quality: 99
+
+chengyu:
+  dictionary: ""
+  user_dict: dicts/chengyu
+  db_class: stabledb
+  enable_sentence: false
+  enable_completion: false
+  initial_quality: 1.3
+
+emoji:
+  option_name: emoji
+  opencc_config: emoji.json
+  tags: [abc]
+  inherit_comment: false
+
+chinese_english:
+  option_name: chinese_english
+  opencc_config: chinese_english.json
+  tips: char
+  inherit_comment: false
+
+s2t:
+  option_name: s2t
+  opencc_config: s2t.json
+  tips: none
+  tags: [ abc ]
+
+s2hk:
+  opencc_config: s2hk.json
+  option_name: s2hk
+  tags: [abc]
+
+s2tw:
+  opencc_config: s2tw.json
+  option_name: s2tw
+  tags: [abc]
+
+wanxiang_reverse:
+  tag: wanxiang_reverse
+  dictionary: wanxiang_reverse
+  db_class: stabledb
+  enable_user_dict: false
+  enable_sentence: false
+  prefix: "`"
+  tips: "〔反查：拆分|笔画〕"
+
+radical_reverse_lookup:
+  tags: [ wanxiang_reverse ]
+  overwrite_comment: true
+  dictionary: wanxiang
+
+wanxiang_lookup:
+  tags: [ abc ]
+  key: "`"
+  lookup: [ wanxiang_reverse ]
+
+recognizer:
+  import_preset: default
+  patterns:
+    punct: "^/([0-9]|10|[A-Za-z]+)$"
+    wanxiang_reverse: "^`[A-Za-z]*$"
+    unicode: "^U[a-f0-9]+"
+    number: "^R[0-9]+[.]?[0-9]*"
+    lunar: "^N[0-9]{1,8}"
+    calculator: "^V.*$"
+
+punctuator:
+  digit_separators: ",."
+  __include: wanxiang_symbols:/symbol_table
+
+key_binder:
+  import_preset: default
+  sequence:
+    up: "Control+j"
+    down: "Control+k"
+    reset: "Control+l"
+    pin: "Control+p"
+  shijian_keys: ["/", "o"]
+  tips_key: "period"
+  select_first_character: "bracketleft"
+  select_last_character: "bracketright"
+  bindings:
+    - { when: has_menu, accept: minus, send: Page_Up }
+    - { when: has_menu, accept: equal, send: Page_Down }
+    - { when: has_menu, accept: Alt+Left, send: Shift+Left }
+    - { when: composing, accept: Alt+Right, send: Shift+Right }
+
+editor:
+  bindings:
+    space: confirm
+    Return: commit_raw_input
+    Control+Return: commit_script_text
+    Control+Shift+Return: commit_comment
+    BackSpace: revert
+    Delete: delete
+    Control+BackSpace: back_syllable
+    Control+Delete: delete_candidate
+    Escape: cancel

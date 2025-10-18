@@ -1,0 +1,22 @@
+patch:
+  speller/algebra:
+    __patch:
+      - wanxiang_algebra:/base/小鹤双拼
+  # 固定候选数为 6（7890 为声调键），可按需调整
+  menu/page_size: 6
+
+  # 去除在输入框内通过指令切换到其它双拼/全拼的功能，仅保留当前小鹤双拼
+  translators:
+    - punct_translator
+    - script_translator
+    - lua_translator@*version_display
+    - lua_translator@*shijian
+    - lua_translator@*unicode
+    - lua_translator@*number_translator
+    - lua_translator@*super_calculator
+    - lua_translator@*input_statistics
+    - table_translator@custom_phrase
+    - table_translator@wanxiang_mixedcode
+    - table_translator@wanxiang_reverse
+    - script_translator@add_user_dict
+    - script_translator@user_dict_set
